@@ -17,6 +17,8 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
 
     try:
         original_logo = Image.open(logo_path)
+        #original_logo.apply_transparency()
+        #original_logo.alpha_composite()
     except UnidentifiedImageError:
         print(f"Failed to read logo from {logo_path}. Ensure it's a valid image format.")
         return
@@ -55,11 +57,7 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
                 new_logo_height = int(new_logo_width / logo_aspect_ratio)
 
                 # Resize the logo and its mask
-                logo = original_logo.resize((new_logo_width, new_logo_height))
-                if logo_mask_original:
-                    logo_mask = logo_mask_original.resize((new_logo_width, new_logo_height))
-                else:
-                    logo_mask = None
+                logo = original_logo.resize((new_logo_width, new_logo_height), resample=Image.Resampling.BICUBIC)
 
                 paste_x, paste_y = 0, 0
 
@@ -75,7 +73,12 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
                     paste_x, paste_y = (imageWidth - new_logo_width) // 2, (imageHeight - new_logo_height) // 2
 
                 try:
-                    image.paste(logo, (paste_x, paste_y), logo_mask)
+                    logo = logo.convert("RGBA")
+                    A = logo.getchannel('A')
+                    newA = A.point(lambda i: 128 if i>0 else 0)
+                    logo.putalpha(newA)
+                    image = image.convert('RGBA')
+                    image.alpha_composite(logo, (paste_x, paste_y))
                 except Exception as e:
                     print(f"An error occurred: {e}")
 
@@ -88,7 +91,12 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
                 if not os.path.exists(final_save_directory):
                     os.makedirs(final_save_directory)
 
-                new_image_path = os.path.join(final_save_directory, filename)
+                fn: str = filename
+                spl = fn.split(".")
+                ext = spl.pop()
+                fn = "".join(spl) + "_WM." + ext
+
+                new_image_path = os.path.join(final_save_directory, fn)
                 # Check if the image mode is 'RGBA' and convert it to 'RGB'
                 if image.mode == 'RGBA':
                     image = image.convert('RGB')
@@ -132,4 +140,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    add_watermark(args.dir, args.logo, args.pos, args.new_dir, args.padding)
+    add_watermark(args.dir, args.logo, args.pos, args.new_dir, args.padding, args.scale)
