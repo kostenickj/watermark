@@ -17,20 +17,12 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
 
     try:
         original_logo = Image.open(logo_path)
-        #original_logo.apply_transparency()
-        #original_logo.alpha_composite()
     except UnidentifiedImageError:
         print(f"Failed to read logo from {logo_path}. Ensure it's a valid image format.")
         return
     except Exception as e:
         print(f"An error occurred: {e}")
         return
-
-    # Check if the logo has an alpha channel
-    if original_logo.mode == 'RGBA':
-        logo_mask_original = original_logo.split()[3]
-    else:
-        logo_mask_original = None
 
     # Using os.walk() to make folder image search recursive
     for dirpath, dirnames, filenames in os.walk(directory):
@@ -48,10 +40,10 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
                 
                 full_path = os.path.join(dirpath, filename)
                 image = Image.open(full_path)
-                imageWidth, imageHeight = image.size
+                width, height = image.size
 
                 
-                shorter_side = min(imageWidth, imageHeight)
+                shorter_side = min(width, height)
                 new_logo_width = int(shorter_side * scale/100)
                 logo_aspect_ratio = original_logo.width / original_logo.height
                 new_logo_height = int(new_logo_width / logo_aspect_ratio)
@@ -64,19 +56,19 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
                 if position == 'topleft':
                     paste_x, paste_y = padding, padding
                 elif position == 'topright':
-                    paste_x, paste_y = imageWidth - new_logo_width - padding, padding
+                    paste_x, paste_y = width - new_logo_width - padding, padding
                 elif position == 'bottomleft':
-                    paste_x, paste_y = padding, imageHeight - new_logo_height - padding
+                    paste_x, paste_y = padding, height - new_logo_height - padding
                 elif position == 'bottomright':
-                    paste_x, paste_y = imageWidth - new_logo_width - padding, imageHeight - new_logo_height - padding
+                    paste_x, paste_y = width - new_logo_width - padding, height - new_logo_height - padding
                 elif position == 'center':
-                    paste_x, paste_y = (imageWidth - new_logo_width) // 2, (imageHeight - new_logo_height) // 2
+                    paste_x, paste_y = (width - new_logo_width) // 2, (height - new_logo_height) // 2
 
                 try:
                     logo = logo.convert("RGBA")
-                    A = logo.getchannel('A')
-                    newA = A.point(lambda i: 128 if i>0 else 0)
-                    logo.putalpha(newA)
+                    alpha_channel = logo.getchannel('A')
+                    new_alpha = alpha_channel.point(lambda i: 128 if i>0 else 0)
+                    logo.putalpha(new_alpha)
                     image = image.convert('RGBA')
                     image.alpha_composite(logo, (paste_x, paste_y))
                 except Exception as e:
