@@ -28,6 +28,10 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
     for dirpath, dirnames, filenames in os.walk(directory):
         for filename in filenames:
             if filename.lower().endswith(EXTS) and filename != os.path.basename(logo_path):
+
+                if('_WM' in filename):
+                    continue
+
                 full_path = os.path.join(dirpath, filename)
                 try:
                     image = Image.open(full_path)
@@ -41,12 +45,16 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
                 full_path = os.path.join(dirpath, filename)
                 image = Image.open(full_path)
                 width, height = image.size
+                logo_width, logo_height = original_logo.size
 
                 
                 shorter_side = min(width, height)
                 new_logo_width = int(shorter_side * scale/100)
                 logo_aspect_ratio = original_logo.width / original_logo.height
                 new_logo_height = int(new_logo_width / logo_aspect_ratio)
+
+                # if new_logo_height > int(new_logo_height / logo_aspect_ratio):
+                #     new_logo_height = int( float(new_logo_height) * .75)
 
                 # Resize the logo and its mask
                 logo = original_logo.resize((new_logo_width, new_logo_height), resample=Image.Resampling.BICUBIC)
@@ -102,22 +110,24 @@ def add_watermark(directory, logo_path, position, new_directory, padding, scale)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A script to add watermarks to images. Given a directory, this will traverse through all its images and apply the specified watermark. The resulting watermarked images can be saved in the same directory or a new specified directory, maintaining the original directory structure.")
 
-    parser.add_argument('dir', 
+    parser.add_argument('--dir', 
                         help="Directory containing the images you want to watermark. The script will search recursively within this directory.",
-                        metavar='SourceDirectory')
+                        default=r'',
+                        metavar='SourceDirectory', required=False)
 
-    parser.add_argument('logo', 
+    parser.add_argument('--logo', 
                         help="Path to the logo image that will be used as the watermark.",
+                        default="",
                         metavar='WatermarkLogoPath')
 
     parser.add_argument('--pos', 
                         choices=['topleft', 'topright', 'bottomleft', 'bottomright', 'center'], 
-                        default='center',
-                        help="Specifies the position of the watermark on the image. Default is 'center'.")
+                        default='bottomleft',
+                        help="Specifies the position of the watermark on the image. Default is 'bottomleft'.")
 
     parser.add_argument('--new_dir',
                         default=None, 
-                        help="An optional directory where the watermarked images will be saved. If not provided, watermarked images will overwrite originals in the source directory. The original directory structure will be maintained.",
+                        help="An optional directory where the watermarked images will be saved. If not provided, watermarked images will use originals in the source directory. The original directory structure will be maintained.",
                         metavar='DestinationDirectory')
 
     parser.add_argument('--padding', 
@@ -126,7 +136,7 @@ if __name__ == "__main__":
                         help="Specifies the padding (in pixels) around the watermark, useful when watermark is positioned at the corners. Default is 0, meaning no padding.")
     parser.add_argument('--scale',
                         type=float, 
-                        default=20,
+                        default=30,
                         help="Resize the watermark based on a percentage of the image's width. E.g., for 10% of the image's width, provide 10.")
 
 
